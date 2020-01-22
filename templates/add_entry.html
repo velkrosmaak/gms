@@ -1,0 +1,26 @@
+<head>
+  <link rel="stylesheet" href="style.css">
+</head>
+
+
+<div class="container">  
+  <form id="contact" action="{{ url_for('do_add_stats') }}" method="post">
+    <h3>Add value to DB</h3>
+    <fieldset>
+      <input placeholder="Label" type="text" name="label" tabindex="1" required autofocus>
+    </fieldset>
+    <fieldset>
+      <input placeholder="Value" type="text" name="value" tabindex="2" required>
+    </fieldset>
+    <fieldset>
+      <input placeholder="Note" type="text" name="note" tabindex="3">
+    </fieldset>
+    <fieldset>
+      <input placeholder="Tag" type="text" name="tag" tabindex="3" required>
+    </fieldset>
+    <fieldset>
+      <button name="submit" type="submit" id="add-db-submit" data-submit="...Sending">Add Record</button>
+    </fieldset>
+    <p class="copyright">IV Labs</p>
+  </form>
+</div>

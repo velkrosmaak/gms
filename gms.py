@@ -5,12 +5,20 @@ import sqlite3
 # app = Flask(__name__)
 app = Flask(__name__, static_url_path='')
 
+'''
+TODO:
+Add tag field
+list all tags on homepage
+search tags form
+multiple tags
+import csv bulk data
 
-labels = [
-    'JAN', 'FEB', 'MAR', 'APR',
-    'MAY', 'JUN', 'JUL', 'AUG',
-    'SEP', 'OCT', 'NOV', 'DEC'
-]
+'''
+
+# SQLite db config
+global dbtablename
+dbtablename = "GMS_table_3"
+dbfile = "gms.db"
 
 def generate_random(num_results):
     i = 1
@@ -23,12 +31,6 @@ def generate_random(num_results):
     print(random_values)
     return random_values
     
-# values = [
-#     967.67, 1190.89, 1079.75, 1349.19,
-#     2328.91, 2504.28, 2873.83, 4764.87,
-#     4349.29, 6458.30, 9907, 16297
-# ]
-
 colors = [
     "#F7464A", "#46BFBD", "#FDB45C", "#FEDCBA",
     "#ABCDEF", "#DDDDDD", "#ABCABC", "#4169E1",
@@ -37,40 +39,63 @@ colors = [
 
 # SQlite3 stuff
 
-global dbtablename
-dbtablename = "GMS_table_1"
-dbfile = "gms.db"
-
 def connectsqlite3():
     global conn
     conn = sqlite3.connect(dbfile)
 
-def writetosqlite3(tablename, label, value, timestamp, note): #write current track to sqlite3
+def writetosqlite3(tablename, label, value, timestamp, note, tag): #write current track to sqlite3
     global conn
     global timenow
     global dbtablename
     c = conn.cursor()
 
-    tblquery = f"INSERT INTO {dbtablename} VALUES (?,?,?,?)"
-    # tblquery = "INSERT INTO "
-    # tblquery += tablename
-    # tblquery += (''' VALUES (?,?,?,?,?,?,?,?,?)''')
-    c.execute(tblquery, (str(label),str(value),str(timestamp),str(note)))
+    tblquery = f"INSERT INTO {dbtablename} VALUES (?,?,?,?,?)"
+    c.execute(tblquery, (str(label),str(value),str(timestamp),str(note), str(tag)))
     conn.commit()
+
+def searchsqlite3_tag(stat_tag, limitno):
+    global conn
+    global dbtablename
+    c = conn.cursor()
+
+    # tblquery = ('SELECT * FROM \"{dn}\" WHERE \"{cn}\" = \"{st}\"').format(dn=dbtablename, cn=columnname, st=searchterm)
+    tblquery = f"SELECT * FROM {dbtablename} WHERE tag = {stat_tag}"
+    # tblquery = ('SELECT * FROM \"{dn}\"').format(dn=dbtablename)
+    # tblquery = f"SELECT * FROM {dbtablename}"
+
+    # use graphid to identify a specific set of stats. use tags for stats? 
+
+    c.execute(tblquery)
+    #return conn.commit()
+    all_rows = c.fetchall()
+    return all_rows
+
+
+def sqlite3_list_tags(limitno):
+    '''
+    List all unique tags in the DB
+    '''
+    global conn
+    global dbtablename
+    c = conn.cursor()
+
+    tblquery = f"SELECT DISTINCT tag FROM {dbtablename}"
+
+    c.execute(tblquery)
+
+    all_rows = c.fetchall()
+    return all_rows
+
 
 def searchsqlite3(graphid, columnname, limitno):
     global conn
     global dbtablename
     c = conn.cursor()
 
-    # tblquery = ('SELECT * FROM \"{dn}\" WHERE \"{cn}\" = \"{st}\"').format(dn=dbtablename, cn=columnname, st=searchterm)
-    # tblquery = ('SELECT * FROM \"{dn}\"').format(dn=dbtablename)
     tblquery = f"SELECT * FROM {dbtablename}"
 
-    # use graphid to identify a specific set of stats. use tags for stats? 
-
     c.execute(tblquery)
-    #return conn.commit()
+
     all_rows = c.fetchall()
     return all_rows
 
@@ -90,13 +115,13 @@ def createsqlite3table(tablename):
     c = conn.cursor()
 
     try:
-        query = f"CREATE TABLE {dbtablename} (label text, value text, timestamp text, note text)"
+        query = f"CREATE TABLE {dbtablename} (label text, value text, timestamp text, note text, tag text)"
         # query = "CREATE TABLE "
         # query += tablename
         # query += " (label text, value text, timestamp text, note text)"
         c.execute(query)
         conn.commit()
-        print ("INFO: Created new table " + tablename)
+        print (f"INFO: Created new table {dbtablename} in {tablename}")
     except:
         print ("WARNING: Error creating sqlite3 table. The table probably already exists, which is cool.")
         pass
@@ -104,23 +129,47 @@ def createsqlite3table(tablename):
 def closesqlite3conn():
     conn.close()
 
+def get_timestamp():
+    from datetime import datetime
+    dateTimeObj = datetime.now()
+    return dateTimeObj
+
 
 # Flask routes
+
+@app.route('/add_stats')
+def addshit():
+    return render_template('add_entry.html')
+
+
 @app.route('/')
 def root():
     return app.send_static_file('index.html')
 
-#  label, value, timestamp, note
-@app.route('/add_stats')
-def graph2():
-    value = request.args.get('label')
-    label = request.args.get('value')
 
+@app.route('/list_tags')
+def list_tags():
     connectsqlite3()
-    writetosqlite3(dbtablename, value, label, "note", "time")
+    tag_list = sqlite3_list_tags(100)
     closesqlite3conn()
+    return str(tag_list)
+
+
+@app.route('/do_add_stats', methods=['POST'])
+def do_add_stats():
     
-    return "Wrote stuff to DB"
+    label = request.form['value']
+    value = request.form['label']
+    note = request.form['note']
+    tag2 = request.form['tag']
+    ts = get_timestamp()
+    
+    connectsqlite3()
+    writetosqlite3(dbtablename, value, label, ts, note, tag2)
+    closesqlite3conn()
+
+    return render_template('record_added.html', ts=ts, note=note, label=label, value=value, tag=tag2)
+    
 
 @app.route('/graph')
 def graph1():
@@ -138,6 +187,25 @@ def graph1():
     bar_labels=return_labels
     bar_values=return_values
     return render_template('bar_chart.html', title=graphid, max=max(return_values), labels=bar_labels, values=bar_values)
+
+@app.route('/graph_tag')
+def graph_tag():
+    graph_tag = request.args.get('tag')
+    print(graph_tag)
+    connectsqlite3()
+    return_labels = []
+    return_values = []
+    returnval = searchsqlite3_tag(graph_tag, 100)
+    for ting, blah, shiz, funk, boom in returnval:
+        return_labels.append(ting)
+        return_values.append(blah)
+    closesqlite3conn()
+    # return str(return_labels + return_values)
+
+    bar_labels=return_labels
+    bar_values=return_values
+    return render_template('bar_chart.html', title=graph_tag, max=max(return_values), labels=bar_labels, values=bar_values)
+
 
 @app.route('/bar')
 def bar():
