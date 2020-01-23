@@ -147,14 +147,6 @@ def root():
     return app.send_static_file('index.html')
 
 
-@app.route('/list_tags')
-def list_tags():
-    connectsqlite3()
-    tag_list = sqlite3_list_tags(100)
-    closesqlite3conn()
-    return str(tag_list)
-
-
 @app.route('/do_add_stats', methods=['POST'])
 def do_add_stats():
     
@@ -169,6 +161,24 @@ def do_add_stats():
     closesqlite3conn()
 
     return render_template('record_added.html', ts=ts, note=note, label=label, value=value, tag=tag2)
+
+@app.route('/api/addstats')
+def do_add_stats_api():
+    '''
+    For submitting stats using automation such as curl. eg /api/addstats?label=blah&value=13.....
+    '''
+
+    apilabel2 = request.args.get('value')
+    apivalue2 = request.args.get('label')
+    apinote2 = request.args.get('note')
+    apitag2 = request.args.get('tag')
+    apits = get_timestamp()
+    
+    connectsqlite3()
+    writetosqlite3(dbtablename, apivalue2, apilabel2, apits, apinote2, apitag2)
+    closesqlite3conn()
+
+    return "OK"
     
 
 @app.route('/graph')
@@ -188,6 +198,22 @@ def graph1():
     bar_labels=return_labels
     bar_values=return_values
     return render_template('bar_chart.html', title=graphid, max=max(return_values), labels=bar_labels, values=bar_values)
+
+@app.route('/list_tags')
+def list_all_tags():
+    
+    connectsqlite3()
+    returned_tags = []
+    return_tags = sqlite3_list_tags(100)
+    for tags3 in return_tags:
+        tags3 = str(tags3).replace("('", "").replace("',)", "")
+        returned_tags.append(str(tags3))
+
+    closesqlite3conn()
+    # return str(return_labels + return_values)
+
+    return render_template('list_tags.html', len=len(returned_tags), tags=returned_tags)
+
 
 @app.route('/graph_tag')
 def graph_tag():
