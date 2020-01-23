@@ -178,12 +178,13 @@ def graph1():
     return_labels = []
     return_values = []
     returnval = searchsqlite3(graphid, "value", 100)
-    for ting, blah, shiz, funk in returnval:
+    for ting, blah, shiz, funk, boom in returnval:
+        blah_num = int(blah)
         return_labels.append(ting)
-        return_values.append(blah)
+        return_values.append(blah_num)
     closesqlite3conn()
-    # return str(return_labels + return_values)
-
+    
+    # print(max(return_values))
     bar_labels=return_labels
     bar_values=return_values
     return render_template('bar_chart.html', title=graphid, max=max(return_values), labels=bar_labels, values=bar_values)
@@ -197,14 +198,15 @@ def graph_tag():
     return_values = []
     returnval = searchsqlite3_tag(graph_tag, 100)
     for ting, blah, shiz, funk, boom in returnval:
+        blah_num = int(blah)
         return_labels.append(ting)
-        return_values.append(blah)
+        return_values.append(blah_num)
     closesqlite3conn()
     # return str(return_labels + return_values)
 
     bar_labels=return_labels
     bar_values=return_values
-    return render_template('bar_chart.html', title=graph_tag, max=max(return_values), labels=bar_labels, values=bar_values)
+    return render_template('bar_chart.html', title=graph_tag, max=max(bar_values), labels=bar_labels, values=bar_values)
 
 
 @app.route('/bar')
